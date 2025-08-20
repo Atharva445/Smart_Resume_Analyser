@@ -1,3 +1,4 @@
+import os, pickle
 import streamlit as st
 import nltk
 import spacy
@@ -27,6 +28,77 @@ import plotly.express as px
 # def fetch_yt_video(link):
 #     video = pafy.new(link)
 #     return video.title
+
+
+
+
+def predict_salary_from_resume(resume_data):
+    # Locate model
+    base_dir = os.path.dirname(__file__)
+    model_path = os.path.join(base_dir, "model", "salary_predictor.pkl")
+
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model file not found at {model_path}")
+
+    with open(model_path, "rb") as f:
+        model = pickle.load(f)
+
+    # Prepare features
+    input_data = {
+        "WorkExp": resume_data.get("WorkExp", 0),
+        "YearsCodePro": resume_data.get("YearsCodePro", 0),
+        "NumberOfDatabasesKnown": resume_data.get("NumberOfDatabasesKnown", 0)
+    }
+
+    # Print in terminal for debugging
+    print("=== Features Fed to Model ===")
+    print(f"WorkExp: {resume_data['WorkExp']}")
+    print(f"YearsCodePro: {resume_data['YearsCodePro']}")
+    print(f"NumberOfDatabasesKnown: {resume_data['NumberOfDatabasesKnown']}")
+    print(f"Database Names: {resume_data['DatabaseSkills']}")
+    print(f"NumberOfPlatformsKnown: {resume_data['NumberOfPlatformsKnown']}")
+    print(f"Platforms: {resume_data['Platforms']}")
+    print(f"NumberOfWebFrameworksKnown: {resume_data['NumberOfWebFrameworksKnown']}")
+    print(f"Frameworks: {resume_data['Frameworks']}")
+
+    print("\n=== Employment Types Detected ===")
+    for key in ["Freelancer","Full-time","Part-time","Hybrid","In-person","Remote"]:
+        if resume_data.get(key,0) == 1:
+            print(key)
+
+    print("\n=== Education Levels Detected ===")
+    for key in ["Associate","Bachelors","College","Doctorate","Masters"]:
+        if resume_data.get(key,0) == 1:
+            print(key)
+
+    print("\n=== Roles Detected ===")
+    for key in ["Developer","Designer","Management","Research","Security","SysAdmin","DataTech","Database","Education"]:
+        if resume_data.get(key,0) == 1:
+            print(key)
+
+    print("\n=== Regions Detected ===")
+    for key in ["Africa","Asia","Europe","North America","Oceania","South America"]:
+        if resume_data.get(key,0) == 1:
+            print(key)
+
+    print("\n=== Industries Detected ===")
+    for key in ["Finance","Healthcare","IT & Software","Manufacturing & Supply"]:
+        if resume_data.get(key,0) == 1:
+            print(key)
+
+
+    df = pd.DataFrame([input_data])
+
+    # Align with training features
+    for col in model.feature_names_in_:
+        if col not in df.columns:
+            df[col] = 0
+    df = df[model.feature_names_in_]
+
+    return round(model.predict(df)[0], 2)
+
+
+
 
 
 def get_table_download_link(df, filename, text):
@@ -156,6 +228,13 @@ def run():
                 ## Get the whole resume data
                 resume_text = pdf_reader(save_image_path)
 
+                try:
+                    predicted_salary = predict_salary_from_resume(resume_data)
+                    st.success(f"💰 Estimated Salary: ${predicted_salary}")
+                except Exception as e:
+                        st.error(f"Salary prediction failed: {e}")
+
+
                 st.header("**Resume Analysis**")
                 st.success("Hello " + resume_data.get('name','candidate'))
                 st.subheader("**Your Basic info**")
@@ -167,18 +246,18 @@ def run():
                 except:
                     pass
                 cand_level = ''
-                if resume_data.get('no_of_pages', 1) == 1:
-                    cand_level = "Fresher"
-                    st.markdown('''<h4 style='text-align: left; color: #d73b5c;'>You are looking Fresher.</h4>''',
-                                unsafe_allow_html=True)
-                elif resume_data.get('no_of_pages', 1) == 2:
-                    cand_level = "Intermediate"
-                    st.markdown('''<h4 style='text-align: left; color: #1ed760;'>You are at intermediate level!</h4>''',
-                                unsafe_allow_html=True)
-                elif resume_data.get('no_of_pages', 1) >= 3:
-                    cand_level = "Experienced"
-                    st.markdown('''<h4 style='text-align: left; color: #fba171;'>You are at experience level!''',
-                                unsafe_allow_html=True)
+                # if resume_data.get('no_of_pages', 1) == 1:
+                #     cand_level = "Fresher"
+                #     st.markdown('''<h4 style='text-align: left; color: #d73b5c;'>You are looking Fresher.</h4>''',
+                #                 unsafe_allow_html=True)
+                # elif resume_data.get('no_of_pages', 1) == 2:
+                #     cand_level = "Intermediate"
+                #     st.markdown('''<h4 style='text-align: left; color: #1ed760;'>You are at intermediate level!</h4>''',
+                #                 unsafe_allow_html=True)
+                # elif resume_data.get('no_of_pages', 1) >= 3:
+                #     cand_level = "Experienced"
+                #     st.markdown('''<h4 style='text-align: left; color: #fba171;'>You are at experience level!''',
+                #                 unsafe_allow_html=True)
 
                 st.subheader("**Skills Recommendation💡**")
                 ## Skill shows
@@ -298,82 +377,82 @@ def run():
                 timestamp = str(cur_date + '_' + cur_time)
 
                 ### Resume writing recommendation
-                st.subheader("**Resume Tips & Ideas💡**")
-                resume_score = 0
-                if 'Objective' in resume_text:
-                    resume_score = resume_score + 20
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #1ed760;'>[+] Awesome! You have added Objective</h4>''',
-                        unsafe_allow_html=True)
-                else:
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #fabc10;'>[-] According to our recommendation please add your career objective, it will give your career intension to the Recruiters.</h4>''',
-                        unsafe_allow_html=True)
+                # st.subheader("**Resume Tips & Ideas💡**")
+                # resume_score = 0
+                # if 'Objective' in resume_text:
+                #     resume_score = resume_score + 20
+                #     st.markdown(
+                #         '''<h4 style='text-align: left; color: #1ed760;'>[+] Awesome! You have added Objective</h4>''',
+                #         unsafe_allow_html=True)
+                # else:
+                #     st.markdown(
+                #         '''<h4 style='text-align: left; color: #fabc10;'>[-] According to our recommendation please add your career objective, it will give your career intension to the Recruiters.</h4>''',
+                #         unsafe_allow_html=True)
 
-                if 'Declaration' in resume_text:
-                    resume_score = resume_score + 20
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #1ed760;'>[+] Awesome! You have added Delcaration✍/h4>''',
-                        unsafe_allow_html=True)
-                else:
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #fabc10;'>[-] According to our recommendation please add Declaration✍. It will give the assurance that everything written on your resume is true and fully acknowledged by you</h4>''',
-                        unsafe_allow_html=True)
+                # if 'Declaration' in resume_text:
+                #     resume_score = resume_score + 20
+                #     st.markdown(
+                #         '''<h4 style='text-align: left; color: #1ed760;'>[+] Awesome! You have added Delcaration✍/h4>''',
+                #         unsafe_allow_html=True)
+                # else:
+                #     st.markdown(
+                #         '''<h4 style='text-align: left; color: #fabc10;'>[-] According to our recommendation please add Declaration✍. It will give the assurance that everything written on your resume is true and fully acknowledged by you</h4>''',
+                #         unsafe_allow_html=True)
 
-                if 'Hobbies' or 'Interests' in resume_text:
-                    resume_score = resume_score + 20
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #1ed760;'>[+] Awesome! You have added your Hobbies⚽</h4>''',
-                        unsafe_allow_html=True)
-                else:
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #fabc10;'>[-] According to our recommendation please add Hobbies⚽. It will show your persnality to the Recruiters and give the assurance that you are fit for this role or not.</h4>''',
-                        unsafe_allow_html=True)
+                # if 'Hobbies' or 'Interests' in resume_text:
+                #     resume_score = resume_score + 20
+                #     st.markdown(
+                #         '''<h4 style='text-align: left; color: #1ed760;'>[+] Awesome! You have added your Hobbies⚽</h4>''',
+                #         unsafe_allow_html=True)
+                # else:
+                #     st.markdown(
+                #         '''<h4 style='text-align: left; color: #fabc10;'>[-] According to our recommendation please add Hobbies⚽. It will show your persnality to the Recruiters and give the assurance that you are fit for this role or not.</h4>''',
+                #         unsafe_allow_html=True)
 
-                if 'Achievements' in resume_text:
-                    resume_score = resume_score + 20
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #1ed760;'>[+] Awesome! You have added your Achievements🏅 </h4>''',
-                        unsafe_allow_html=True)
-                else:
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #fabc10;'>[-] According to our recommendation please add Achievements🏅. It will show that you are capable for the required position.</h4>''',
-                        unsafe_allow_html=True)
+                # if 'Achievements' in resume_text:
+                #     resume_score = resume_score + 20
+                #     st.markdown(
+                #         '''<h4 style='text-align: left; color: #1ed760;'>[+] Awesome! You have added your Achievements🏅 </h4>''',
+                #         unsafe_allow_html=True)
+                # else:
+                #     st.markdown(
+                #         '''<h4 style='text-align: left; color: #fabc10;'>[-] According to our recommendation please add Achievements🏅. It will show that you are capable for the required position.</h4>''',
+                #         unsafe_allow_html=True)
 
-                if 'Projects' in resume_text:
-                    resume_score = resume_score + 20
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #1ed760;'>[+] Awesome! You have added your Projects👨‍💻 </h4>''',
-                        unsafe_allow_html=True)
-                else:
-                    st.markdown(
-                        '''<h4 style='text-align: left; color: #fabc10;'>[-] According to our recommendation please add Projects👨‍💻. It will show that you have done work related the required position or not.</h4>''',
-                        unsafe_allow_html=True)
+                # if 'Projects' in resume_text:
+                #     resume_score = resume_score + 20
+                #     st.markdown(
+                #         '''<h4 style='text-align: left; color: #1ed760;'>[+] Awesome! You have added your Projects👨‍💻 </h4>''',
+                #         unsafe_allow_html=True)
+                # else:
+                #     st.markdown(
+                #         '''<h4 style='text-align: left; color: #fabc10;'>[-] According to our recommendation please add Projects👨‍💻. It will show that you have done work related the required position or not.</h4>''',
+                #         unsafe_allow_html=True)
 
-                st.subheader("**Resume Score📝**")
-                st.markdown(
-                    """
-                    <style>
-                        .stProgress > div > div > div > div {
-                            background-color: #d73b5c;
-                        }
-                    </style>""",
-                    unsafe_allow_html=True,
-                )
-                my_bar = st.progress(0)
-                score = 0
-                for percent_complete in range(resume_score):
-                    score += 1
-                    time.sleep(0.1)
-                    my_bar.progress(percent_complete + 1)
-                st.success('** Your Resume Writing Score: ' + str(score) + '**')
-                st.warning(
-                    "** Note: This score is calculated based on the content that you have added in your Resume. **")
-                st.balloons()
+                # st.subheader("**Resume Score📝**")
+                # st.markdown(
+                #     """
+                #     <style>
+                #         .stProgress > div > div > div > div {
+                #             background-color: #d73b5c;
+                #         }
+                #     </style>""",
+                #     unsafe_allow_html=True,
+                # )
+                # my_bar = st.progress(0)
+                # score = 0
+                # for percent_complete in range(resume_score):
+                #     score += 1
+                #     time.sleep(0.1)
+                #     my_bar.progress(percent_complete + 1)
+                # st.success('** Your Resume Writing Score: ' + str(score) + '**')
+                # st.warning(
+                #     "** Note: This score is calculated based on the content that you have added in your Resume. **")
+                # st.balloons()
 
-                insert_data(resume_data.get('name','candidate'), resume_data.get('email','N/A'), str(resume_score), timestamp,
-                            str(resume_data.get('no_of_pages',1)), reco_field, cand_level, str(resume_data.get('skills', [])),
-                            str(recommended_skills), str(rec_course))
+                # insert_data(resume_data.get('name','candidate'), resume_data.get('email','N/A'), str(resume_score), timestamp,
+                #             str(resume_data.get('no_of_pages',1)), reco_field, cand_level, str(resume_data.get('skills', [])),
+                #             str(recommended_skills), str(rec_course))
 
                 # ## Resume writing video
                 # st.header("**Bonus Video for Resume Writing Tips💡**")

@@ -4,83 +4,6 @@ from pdfminer.high_level import extract_text
 from datetime import datetime
 
 
-# === Dictionaries for Feature Extraction ===
-
-DATABASES = [
-    "mysql", "postgresql", "sqlite", "oracle", "mariadb", "db2", "mssql",
-    "mongodb", "cassandra", "redis", "couchdb", "dynamodb", "cosmosdb",
-    "neo4j", "arangodb", "elasticsearch", "firestore", "hbase", "influxdb","sql"
-]
-
-PLATFORMS = [
-    "windows", "linux", "ubuntu", "red hat", "debian", "centos", "macos",
-    "android", "ios", "chrome os", "unix", "fedora",
-    "aws", "amazon web services", "azure", "gcp", "google cloud", "digitalocean",
-    "heroku", "oracle cloud", "ibm cloud", "salesforce", "openstack", "vmware",
-    "docker", "kubernetes", "openshift", "jenkins", "gitlab ci", "circleci"
-]
-
-WEB_FRAMEWORKS = [
-    "django", "flask", "fastapi", "pyramid", "web2py",
-    "spring", "spring boot", "struts", "hibernate",
-    "express", "nestjs", "meteor", "koa", "sails.js",
-    "laravel", "symfony", "codeigniter", "cakephp", "yii",
-    "rails", "ruby on rails", "sinatra",
-    "asp.net", "asp.net core", "blazor",
-    "gin", "echo", "fiber",
-    "react", "angular", "vue", "svelte", "ember.js", "backbone.js",
-    "next.js", "nuxt.js", "gatsby", "astro",
-    "flutter", "react native", "ionic", "cordova", "swiftui", "kotlin"
-]
-
-EMPLOYMENT_TYPES = {
-    "Freelancer": ["freelance", "independent contractor", "self-employed"],
-    "Full-time": ["full-time", "permanent"],
-    "Part-time": ["part-time"],
-    "Hybrid": ["hybrid"],
-    "In-person": ["on-site", "in-person"],
-    "Remote": ["remote", "work from home", "telecommute"]
-}
-
-EDUCATION_LEVELS = {
-    "Doctorate": ["phd", "doctorate", "d.phil"],
-    "Masters": ["master", "msc", "m.tech", "mca", "mba"],
-    "Bachelors": ["bachelor", "bsc", "b.tech", "b.e", "bca"],
-    "Associate": ["associate", "diploma"],
-    "College": ["college", "junior college"]
-}
-
-ROLES = {
-    "Developer": ["developer", "software engineer", "programmer"],
-    "Designer": ["designer", "ui/ux", "graphic designer", "product designer"],
-    "Management": ["manager", "management", "team lead", "product owner"],
-    "Research": ["research", "researcher", "r&d"],
-    "Security": ["security", "cybersecurity", "infosec"],
-    "SysAdmin": ["system administrator", "sysadmin", "infrastructure engineer"],
-    "DataTech": ["data scientist", "data analyst", "ml engineer", "ai engineer"],
-    "Database": ["database administrator", "dba"],
-    "Education": ["lecturer", "teacher", "professor", "trainer"]
-}
-
-REGIONS = {
-    "Africa": ["africa", "nigeria", "kenya", "south africa", "egypt"],
-    "Asia": ["india", "china", "japan", "asia", "singapore", "uae", "pakistan"],
-    "Europe": ["germany", "france", "uk", "europe", "italy", "spain", "sweden"],
-    "North America": ["usa", "united states", "canada", "north america"],
-    "South America": ["brazil", "argentina", "chile", "south america"],
-    "Oceania": ["australia", "new zealand", "oceania"]
-}
-
-INDUSTRIES = {
-    "Finance": ["finance", "banking", "investment", "accounting"],
-    "Healthcare": ["healthcare", "hospital", "medical", "pharma", "biotech"],
-    "IT & Software": ["it", "software", "technology", "saas"],
-    "Manufacturing & Supply": ["manufacturing", "supply chain", "logistics", "production"]
-}
-
-
-
-
 # Load English NLP model
 nlp = spacy.load("en_core_web_sm")
 
@@ -92,7 +15,7 @@ skill_list = [
 ]
 
 # Database specific keywords
-# db_keywords = ["mysql", "mongodb", "postgresql", "oracle", "sqlite", "sql server"]
+db_keywords = ["mysql", "mongodb", "postgresql", "oracle", "sqlite", "sql server"]
 
 def extract_text_from_pdf(file_path):
     return extract_text(file_path)
@@ -117,23 +40,9 @@ def extract_skills(text):
     found_skills = [skill for skill in skill_list if skill in text]
     return list(set(found_skills))
 
-def extract_from_list(text, keywords):
-    text = text.lower()
-    found = [k for k in keywords if k in text]
-    return len(found), found
 
-def extract_from_dict_whole(text, mapping):
-    text = text.lower()
-    result = {key: 0 for key in mapping.keys()}
-    for key, kws in mapping.items():
-        for kw in kws:
-            if re.search(r"\b" + re.escape(kw) + r"\b", text):
-                result[key] = 1
-                break
-    return result
-
-
-
+from datetime import datetime
+import re
 
 def extract_workexp(text):
     text_lower = text.lower()
@@ -211,34 +120,30 @@ def extract_workexp(text):
 
     return round(total_months / 12, 1) if total_months > 0 else 0
 
+
+
+
+
+
+
+
+
+db_keywords = ["mysql","sql", "mongodb", "postgresql", "oracle", "sqlite", "sql server"]
+
 def extract_num_db_skills(text):
     text = text.lower()
-    found_dbs = [db for db in DATABASES if db in text]
+    found_dbs = [db for db in db_keywords if db in text]
     return len(found_dbs), found_dbs
 
 
 def parse_resume(file_path):
     text = extract_text_from_pdf(file_path)
 
-    # --- Basic existing features ---
     workexp = extract_workexp(text)
     yearscodepro = workexp  # assumption
     noofdbknown, db_names = extract_num_db_skills(text)
 
-    # --- New extractions ---
-    db_count, dbs = extract_from_list(text, DATABASES)
-    platform_count, platforms = extract_from_list(text, PLATFORMS)
-    fw_count, frameworks = extract_from_list(text, WEB_FRAMEWORKS)
-
-    employment = extract_from_dict_whole(text, EMPLOYMENT_TYPES)
-    education = extract_from_dict_whole(text, EDUCATION_LEVELS)
-    roles = extract_from_dict_whole(text, ROLES)
-    regions = extract_from_dict_whole(text, REGIONS)
-    industries = extract_from_dict_whole(text, INDUSTRIES)
-
-
-    # --- Combine everything ---
-    parsed_data = {
+    return {
         "name": extract_name(text),
         "email": extract_email(text),
         "phone": extract_phone(text),
@@ -246,22 +151,8 @@ def parse_resume(file_path):
         "WorkExp": workexp,
         "YearsCodePro": yearscodepro,
         "NumberOfDatabasesKnown": noofdbknown,
-        "DatabaseSkills": db_names,
-        "NumberOfPlatformsKnown": platform_count,
-        "Platforms": platforms,
-        "NumberOfWebFrameworksKnown": fw_count,
-        "Frameworks": frameworks,
+        "DatabaseSkills": db_names,   # NEW: list of DBs
         "no_of_pages": text.count("Page") if "Page" in text else 1,
         "raw_text": text
     }
-
-    # merge dicts (employment, education, roles, regions, industries)
-    parsed_data.update(employment)
-    parsed_data.update(education)
-    parsed_data.update(roles)
-    parsed_data.update(regions)
-    parsed_data.update(industries)
-
-    return parsed_data
-
 
